@@ -64,6 +64,17 @@ public class ShoppingMemoDataSource {
     }
 
     //-----------------------------------------------------------------
+    public void deleteShoppingMemo(ShoppingMemo shoppingMemo){
+        long id = shoppingMemo.getId();  //besorgt die ID
+        database.delete(
+                ShoppingMemoDbHelper.TABLE_SHOPPING_LIST ,
+                ShoppingMemoDbHelper.COLUMN_ID + "=" + id ,
+                null);
+
+        Log.d(TAG, "deleteShoppingMemo: Eintrag gelöscht: " + id + " Inhalt: " +shoppingMemo.toString());
+    }
+
+    //-----------------------------------------------------------------
     // METHODE zum AUSLESEN der EINTRÄGE
     // gibt den Inhalt der Reihen aus, auf dem der cuser platziert wird
     private ShoppingMemo cursorToShoppingMemo(Cursor cursor) {

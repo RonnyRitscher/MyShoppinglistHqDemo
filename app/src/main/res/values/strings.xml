@@ -5,11 +5,13 @@
 
     <string name="action_settings">Einstellungen</string>
 
+    <string name="cab_delete">Eintrag löschen</string>
+
     <string name="editText_hint_quantity">Anzahl</string>
     <string name="editText_hint_product">Produkt</string>
     <string name="editText_hint_coast">Kosten</string>
 
     <string name="button_add_product">+</string>
 
-    <string name="error_message">Das Feld darf nicht leer sein</string>
+    <string name="editText_errorMessage">Das Feld darf nicht leer sein</string>
 </resources>
