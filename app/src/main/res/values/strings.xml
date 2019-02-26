@@ -5,12 +5,19 @@
 
     <string name="action_settings">Einstellungen</string>
 
+    <string name="cab_selectAll">Alle Einträge auswählen</string>
     <string name="cab_delete">Eintrag löschen</string>
+    <string name="cab_change">Eintrag ändern</string>
+    <string name="cab_checked_string">ausgewählt</string>
+
+    <string name="alertDialog_title">Listeneintrag ändern</string>
+    <string name="alertDialog_title_quantity">Anzahl: </string>
+    <string name="alertDialog_title_product">Produkt: </string>
+    <string name="alertDialog_button_positiv">Ändern</string>
+    <string name="alertDialog_button_negativ">Abbrechen</string>
 
     <string name="editText_hint_quantity">Anzahl</string>
     <string name="editText_hint_product">Produkt</string>
-    <string name="editText_hint_coast">Kosten</string>
-
     <string name="button_add_product">+</string>
 
     <string name="editText_errorMessage">Das Feld darf nicht leer sein</string>

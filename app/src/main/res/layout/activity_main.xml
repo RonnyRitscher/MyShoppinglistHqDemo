@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:focusableInTouchMode="true"
     tools:context=".MainActivity">
 
     <EditText
@@ -16,7 +17,8 @@
         android:hint="@string/editText_hint_quantity"
         android:inputType="number"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/editText_product" />
+        app:layout_constraintTop_toTopOf="@+id/editText_product"
+        android:nextFocusDown="@id/editText_product"/>
 
     <EditText
         android:id="@+id/editText_product"
@@ -30,9 +32,11 @@
         android:ems="10"
         android:hint="@string/editText_hint_product"
         android:inputType="text"
+        android:imeOptions="actionGo"
         app:layout_constraintEnd_toStartOf="@+id/button_add_product"
         app:layout_constraintStart_toEndOf="@+id/editText_quantity"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+       />
 
     <Button
         android:id="@+id/button_add_product"
@@ -44,13 +48,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/editText_product" />
 
+
+
     <ListView
         android:id="@+id/listview_shopping_memos"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:layout_marginRight="16dp"
         android:layout_marginBottom="16dp"
@@ -60,3 +66,17 @@
         app:layout_constraintTop_toBottomOf="@+id/editText_product" />
 
 </android.support.constraint.ConstraintLayout>
+
+<!-- ..
+android:focusableInTouchMode="true"  -> springt an das örtlich nächstgelegene Objekt
+
+<Spinner
+        android:id="@+id/spinner_sortierung"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:prompt="spinner_item"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/textView"></Spinner>
+-->

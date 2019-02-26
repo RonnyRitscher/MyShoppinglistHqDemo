@@ -4,15 +4,20 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
@@ -22,7 +27,13 @@ public class MainActivity extends AppCompatActivity {
     //LOG-TAG
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    private boolean iskeyboardClicked = false;
+
+    Spinner mySpinner;
+
     ShoppingMemoDataSource dataSource;
+
+    String[] sortierung = {"Ohne" , "Name (a-z)" , "Name (z-a)"};
 
 
     @Override
@@ -94,14 +105,44 @@ public class MainActivity extends AppCompatActivity {
     //--------------------------------------------------
     //METHODE zum anzeigen ALLER EINRÄGE in der LISTE/DB
     private void showAllListEntries() {
+
+        /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //Spinner auswählen:
+        mySpinner = findViewById(R.id.spinner_sortierung);
+        //ARRAYADAPTER für den Spinner auswählen
+       mySpinner.setAdapter(new ArrayAdapter<>(
+               this ,
+               android.R.layout.simple_list_item_multiple_choice,
+               sortierung));
+
+        mySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  */
+
+        //Liste mit allen EINTRÄGEN der ShoppingMemos
         List<ShoppingMemo> shoppingMemos = dataSource.getAllShoppingMemos();
 
-        //ARRAYADAPTER erzeugen
+        //ARRAYADAPTER für die Listview erzeugen -> siehe AdapterView
         ArrayAdapter<ShoppingMemo> shoppingMemoArrayAdapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_list_item_multiple_choice,
                 shoppingMemos
         );
+
 
         //Listview auswählen
         ListView shoppingMemoListView = findViewById(R.id.listview_shopping_memos);
@@ -110,6 +151,8 @@ public class MainActivity extends AppCompatActivity {
         shoppingMemoListView.setAdapter(shoppingMemoArrayAdapter);
 
     }
+
+
 
     //-----------------------------------------------------
     //METHODE wenn der AddButton geklickt wird
@@ -152,8 +195,10 @@ public class MainActivity extends AppCompatActivity {
 
             //Ausblenden der Tastatur nach adden
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            if (getCurrentFocus() != null) {
-                inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+            if (getCurrentFocus()!=null  && iskeyboardClicked) {
+                // wenn flag=0 dann offnet sich die Tatatur nicht automatisch nach dem Hinzufügen in dem ET_Quantity
+                // wenn flag=1 dann offnet sich die Tatatur automatisch nach dem Hinzufügen
+                inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 1);
             }
 
             // anzeigen aller Einträge
@@ -162,6 +207,16 @@ public class MainActivity extends AppCompatActivity {
             // Zeigt das Ende der Liste an:
             shoppingMemoListView.post(() -> shoppingMemoListView.smoothScrollToPosition(shoppingMemoListView.getCount() - 1));
         });
+
+        //Aktivieren des Buttons mit ENTER
+        editTextProduct.setOnEditorActionListener( (TextView, pos , keyEvent) -> {
+            iskeyboardClicked=true;
+            buttonAddProduct.performClick();
+            editTextQuantity.requestFocus(); //setzt den Focus auf das TV-Quantity
+            iskeyboardClicked=false;
+
+            return true;
+        } );
     }
 
     //------------------------------------------------------------
@@ -202,7 +257,32 @@ public class MainActivity extends AppCompatActivity {
                 // Hier können wir auf Klicks auf CAB-Actions reagieren.
                 switch (item.getItemId()){
                     case R.id.cab_delete:
-                        Toast.makeText(MainActivity.this, "Einträge werden hier gelöscht", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(MainActivity.this, "Einträge werden hier gelöscht", Toast.LENGTH_SHORT).show();
+
+                        //Warapr ein Boolean zu enem Array -> prüft welche Item aktiviert sind
+                        SparseBooleanArray touchedShoppingMemosPositions = shoppingMemoListView.getCheckedItemPositions();
+
+                        //iteration über alle Checkboxen
+                        for(int i=0 ; i<touchedShoppingMemosPositions.size(); i++ ){
+                            //prüft die einzelne Checkbox
+                            boolean isChecked = touchedShoppingMemosPositions.valueAt(i);
+                            //wenn ja, dann löschen
+                            if(isChecked){
+                                //Schlüssel-Position    Key:    Value:true/false
+                                int positionInListView = touchedShoppingMemosPositions.keyAt(i);
+                                // direktes ShoppingMemo-Objekt wird gesucht
+                                ShoppingMemo shoppingMemo = (ShoppingMemo) shoppingMemoListView.getItemAtPosition(positionInListView);
+
+                                Log.d(TAG, "onActionItemClicked: Position im ListView: " + positionInListView +
+                                        " , Inhalt: " + shoppingMemo.toString());
+
+                                //hier wird der Eintrag gelöscht
+                                dataSource.deleteShoppingMemo(shoppingMemo);
+                            }
+                        }
+
+                        showAllListEntries();
+                        mode.finish();
                         return true;
                     default:
                         return false;

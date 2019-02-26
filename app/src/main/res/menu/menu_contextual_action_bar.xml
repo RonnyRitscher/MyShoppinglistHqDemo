@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ändern der Einträge -->
+    <item android:id="@+id/cab_change"
+        android:title="@string/cab_change"
+        android:icon="@android:drawable/ic_menu_edit"/>
+
+    <!-- löschen der Einträge -->
+    <item android:id="@+id/cab_selectAll"
+        android:title="@string/cab_selectAll"
+        android:icon="@android:drawable/ic_input_add"/>
 
     <!-- löschen der Einträge -->
     <item android:id="@+id/cab_delete"

@@ -64,6 +64,30 @@ public class ShoppingMemoDataSource {
     }
 
     //-----------------------------------------------------------------
+    // Ändern eines Eintrags
+    public ShoppingMemo updateShoppingMemo(long id , String newProduct , int newQuantity){
+        //setzen der neuen Werte
+        ContentValues values = new ContentValues();
+        values.put(ShoppingMemoDbHelper.COLUMN_PRODUCT , newProduct);
+        values.put(ShoppingMemoDbHelper.COLUMN_QUANTITY , newQuantity);
+
+        database.update(ShoppingMemoDbHelper.TABLE_SHOPPING_LIST ,
+                values,
+                ShoppingMemoDbHelper.COLUMN_ID + "=" + id ,
+                null);
+
+        //Cursor (sql-statement) erzeugen
+        //SQL-STATEMENT-> " SELECT _id , product , quantity WHERE _id=123 ;"//
+        Cursor cursor = database.query(ShoppingMemoDbHelper.TABLE_SHOPPING_LIST, columns , ShoppingMemoDbHelper.COLUMN_ID + "="+id ,
+                null, null , null , null);
+
+        cursor.moveToFirst();       //curser auf anfang setzen
+        ShoppingMemo memo = cursorToShoppingMemo(cursor);   //cursor auf den Eintrag setzen und als ShoppingMemo-Objekt zuweisen
+        cursor.close();     //cursor schließen
+        return memo;        //ShoppingMemo-Objekt zurückgeben
+    }
+
+    //-----------------------------------------------------------------
     public void deleteShoppingMemo(ShoppingMemo shoppingMemo){
         long id = shoppingMemo.getId();  //besorgt die ID
         database.delete(
@@ -109,7 +133,7 @@ public class ShoppingMemoDataSource {
         while(!cursor.isAfterLast()){
             shoppingMemo = cursorToShoppingMemo(cursor);
             shoppingMemoList.add(shoppingMemo); //Hinzufügen der einzelnen  SM zur SML
-            Log.d(TAG, "getAllShoppingMemos:  ID: " + shoppingMemo.getId() + ", Inhalt: " + shoppingMemo.toString());
+            //Log.d(TAG, "getAllShoppingMemos:  ID: " + shoppingMemo.getId() + ", Inhalt: " + shoppingMemo.toString());
             cursor.moveToNext(); //cursior auf das nachste Element
         }
 
