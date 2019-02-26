@@ -1,11 +1,14 @@
 package de.proneucon.shoppinglisthq;
 
+import android.content.DialogInterface;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.ActionMode;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private boolean iskeyboardClicked = false;
+    boolean returnValue = false;
 
     Spinner mySpinner;
 
@@ -228,15 +232,29 @@ public class MainActivity extends AppCompatActivity {
         // den Multi-Listener verwenden
         //
         shoppingMemoListView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+
+            // Anzahl der ausgewählten Elemente
+            int selectCount = 0;
+            //************************************************************************//
             @Override
             public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
                 // Hier können wir auf das Auswählen von Einträgen reagieren und den Text in
                 // der CAB daran anpassen, bspw. Anzahl der ausgewählten Einträge aktualisieren.
                 // Von hier kann ein mode.invalidate() angefordert werden.
-
-
+                //Aktuelisieren des selectCount`s
+                if(checked){
+                    selectCount++;
+                }else {
+                    selectCount--;
+                }
+                //Aktualisieren der Beschriftung:
+                // "0 ausgewählt"
+                String cabTitle = selectCount + " " + getString(R.string.cab_checked_string);
+                mode.setTitle(cabTitle);
+                // invalidate,  damit es sofort ausgeführt und aktualisiert wird
+                mode.invalidate();
             }
-
+            //************************************************************************//
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 //Hier das Menu aufbauen/erstellt werden
@@ -244,23 +262,36 @@ public class MainActivity extends AppCompatActivity {
                 getMenuInflater().inflate(R.menu.menu_contextual_action_bar , menu);
                 return true;
             }
-
+            //************************************************************************//
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
                 // Hier können wir Updates an der CAB vornehmen, indem wir auf
-                // eine invalidate() Anfrage reagieren.
+                // eine invalidate() Anfrage aus der onItemCheckedStateChanged()  reagieren.
+
+                //MenuItem (EDIT-BUTTON) sichtbar oder unsichtbar machen:
+                MenuItem item = menu.findItem(R.id.cab_change);
+                if(selectCount==1){
+                    item.setVisible(true);
+                }else{
+                    item.setVisible(false);
+                }
                 return false;
             }
-
+            //************************************************************************//
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                // returnValue explitit angegeben
+                returnValue = true;
+
+                // ein Boolean zu einem Array -> prüft welche Item aktiviert sind
+                SparseBooleanArray touchedShoppingMemosPositions = shoppingMemoListView.getCheckedItemPositions();
+
                 // Hier können wir auf Klicks auf CAB-Actions reagieren.
                 switch (item.getItemId()){
                     case R.id.cab_delete:
                         //Toast.makeText(MainActivity.this, "Einträge werden hier gelöscht", Toast.LENGTH_SHORT).show();
 
-                        //Warapr ein Boolean zu enem Array -> prüft welche Item aktiviert sind
-                        SparseBooleanArray touchedShoppingMemosPositions = shoppingMemoListView.getCheckedItemPositions();
+
 
                         //iteration über alle Checkboxen
                         for(int i=0 ; i<touchedShoppingMemosPositions.size(); i++ ){
@@ -280,23 +311,125 @@ public class MainActivity extends AppCompatActivity {
                                 dataSource.deleteShoppingMemo(shoppingMemo);
                             }
                         }
-
-                        showAllListEntries();
-                        mode.finish();
+                        showAllListEntries();   //zeige alle aktuellen Einträge an
+                        mode.finish();          //beendet den contextualActionBar-modus
                         return true;
+
+                    case R.id.cab_change:
+
+                        //iteration über alle Checkboxen
+                        for(int i=0 ; i<touchedShoppingMemosPositions.size(); i++ ) {
+                            //prüft die einzelne Checkbox
+                            boolean isChecked = touchedShoppingMemosPositions.valueAt(i);
+                            //wenn ja, dann löschen
+                            if (isChecked) {
+                                //Schlüssel-Position    Key:    Value:true/false
+                                int positionInListView = touchedShoppingMemosPositions.keyAt(i);
+                                // direktes ShoppingMemo-Objekt wird gesucht
+                                ShoppingMemo shoppingMemo = (ShoppingMemo) shoppingMemoListView.getItemAtPosition(positionInListView);
+
+                                Log.d(TAG, "onActionItemClicked: Position im ListView: " + positionInListView +
+                                        " , Inhalt: " + shoppingMemo.toString());
+
+                                //Hier kommt der Alert-Dialog zum einsatz
+                                AlertDialog editShoppingMemoDialog = createShoppingDialog(shoppingMemo); //erstellen des Dialogs
+                                editShoppingMemoDialog.show(); //Dialog anzeigen
+                            }
+                        }
+                        mode.finish();
+                        break;
+
+//                    /*
+//                    * SELECT-ALL ELEMENTS nachfügen
+//                    */
+//                    case R.id.cab_selectAll:
+//                        for(int i=0 ;i< touchedShoppingMemosPositions.size(); i++){
+//                            //Schlüssel-Position    Key:    Value:true/false
+//                            int positionInListView = touchedShoppingMemosPositions.keyAt(i);
+//                            touchedShoppingMemosPositions.valueAt(i).
+//                        }
+//                        return true;
+//                        /**/
+
                     default:
-                        return false;
+
+                        returnValue = false;
                 }
 
-                //return false;
+                return returnValue;
             }
-
+            //************************************************************************//
             @Override
             public void onDestroyActionMode(ActionMode mode) {
                 // Hier können wir Aktualisierungen an der Activity vornehmen, wenn die CAB
                 // entfernt wird. Standardmäßig werden die ausgewählten Einträge wieder freigegeben.
+
+                //Wenn der nEintrag gelöscht wurde, explizit auf 0 setzen
+                selectCount = 0;
             }
         });
+    }
 
+    //------------------------------------------------------------
+    // ALERT-DIALOG für Einträge ändern
+    private AlertDialog createShoppingDialog(final ShoppingMemo shoppingMemo){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        //Anzeige/Ansicht
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_edit_shopping_memo , null);
+
+        //informationen zum Eintrag einholen und den neuen Eintrag übergeben
+        final EditText editTextNewQuantity = dialogView.findViewById(R.id.editText_new_quantity);
+        editTextNewQuantity.setText(String.valueOf(shoppingMemo.getQuantity()));        //Wichtig ist das Sting.valueOf()
+
+        final EditText editTextNewProduct = dialogView.findViewById(R.id.editText_new_product);
+        editTextNewProduct.setText(shoppingMemo.getProduct());
+
+        //Dialog soll vollständig gebaut werden
+        //jede methode des builders gibt das builder-objekt zurück
+        builder.setView(dialogView)
+                .setTitle(R.string.alertDialog_title)
+                //Positiver Button(StringText , Listener )
+                .setPositiveButton(R.string.alertDialog_button_positiv, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //was soll passieren wenn gedrückt wird:
+                        //Objekte sollen in unsere Datenbak hereingeschrieben werden
+                        String quantityString = editTextNewQuantity.getText().toString();
+                        String product = editTextNewProduct.getText().toString();
+
+                        //sicherstellen, dass keines der felder leer ist
+                        if(TextUtils.isEmpty(quantityString) || TextUtils.isEmpty(product) ){
+                            //wenn leer, dann methode verlassen
+                            Toast.makeText(MainActivity.this, "Felder dürfen nicht leer sein!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        //umwandeln des Strings zum int
+                        int quantity = Integer.parseInt(quantityString);
+
+                        //Eintrag aktualisieren  // An dieser Stelle schreiben wir die geänderten Daten in die SQLite Datenbank
+                        ShoppingMemo memo = dataSource.updateShoppingMemo(shoppingMemo.getId() , product , quantity);
+                        Log.d(TAG, "onClick: Alter Eintrag - ID: " + shoppingMemo.getId() + " inhalt: "+ shoppingMemo.toString() +" -> ");
+                        Log.d(TAG, "onClick: Neuer Eintrag - ID: " + shoppingMemo.getId() + " inhalt: "+ memo.toString() +" -> ");
+
+                        //Alle Einträge wieder anzeigen lassen
+                        showAllListEntries();
+                        // Dialog beenden
+                        dialog.dismiss();
+                    }
+                })
+                //Negativer Button(StringText , Listener )
+                .setNegativeButton(R.string.alertDialog_button_negativ, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //Dialog abbrechen
+                        dialog.cancel();
+                    }
+                });
+        //
+        editTextNewQuantity.setSelection(0 ,  editTextNewQuantity.length());
+
+        //Erstellt den finalen Builder und gibt ihn zurück
+        return builder.create();
     }
 }

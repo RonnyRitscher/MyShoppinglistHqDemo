@@ -64,7 +64,7 @@ public class ShoppingMemoDataSource {
     }
 
     //-----------------------------------------------------------------
-    // Ändern eines Eintrags
+    // METHODE - Ändern eines Eintrags
     public ShoppingMemo updateShoppingMemo(long id , String newProduct , int newQuantity){
         //setzen der neuen Werte
         ContentValues values = new ContentValues();
@@ -88,6 +88,7 @@ public class ShoppingMemoDataSource {
     }
 
     //-----------------------------------------------------------------
+    // METHODE - löschen eines Beitrags
     public void deleteShoppingMemo(ShoppingMemo shoppingMemo){
         long id = shoppingMemo.getId();  //besorgt die ID
         database.delete(
