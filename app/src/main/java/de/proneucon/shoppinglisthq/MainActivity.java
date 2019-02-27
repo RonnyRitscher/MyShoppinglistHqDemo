@@ -1,6 +1,8 @@
 package de.proneucon.shoppinglisthq;
 
 import android.content.DialogInterface;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
@@ -23,6 +26,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,15 +36,23 @@ public class MainActivity extends AppCompatActivity {
     //LOG-TAG
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    private ListView mShoppingMemosListView;
     private boolean iskeyboardClicked = false;
     boolean returnValue = false;
 
-    Spinner mySpinner;
+    boolean sortData = true;
+
+
 
     ShoppingMemoDataSource dataSource;
 
+    Spinner mySpinner;
     String[] sortierung = {"Ohne" , "Name (a-z)" , "Name (z-a)"};
 
+
+    //************************************************************
+    //START CALLBACKS ********************************************
+    //************************************************************
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "Das Datenquellen-Objekt wird angelegt.");
         dataSource = new ShoppingMemoDataSource(this);
+
+        initializeShoppingMemosListView();
 
         //Methode um Produkte in die Liste hinzuzufügen
         activateAddButton();
@@ -106,53 +122,36 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    //END CALLABCKS***********************************************
+    //************************************************************
+    //START METHODS***********************************************
+
     //--------------------------------------------------
     //METHODE zum anzeigen ALLER EINRÄGE in der LISTE/DB
     private void showAllListEntries() {
 
-        /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //Spinner auswählen:
-        mySpinner = findViewById(R.id.spinner_sortierung);
-        //ARRAYADAPTER für den Spinner auswählen
-       mySpinner.setAdapter(new ArrayAdapter<>(
-               this ,
-               android.R.layout.simple_list_item_multiple_choice,
-               sortierung));
-
-        mySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  */
-
         //Liste mit allen EINTRÄGEN der ShoppingMemos
         List<ShoppingMemo> shoppingMemos = dataSource.getAllShoppingMemos();
 
-        //ARRAYADAPTER für die Listview erzeugen -> siehe AdapterView
-        ArrayAdapter<ShoppingMemo> shoppingMemoArrayAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_list_item_multiple_choice,
-                shoppingMemos
-        );
+//        //ARRAYADAPTER für die Listview erzeugen -> siehe AdapterView
+//        ArrayAdapter<ShoppingMemo> shoppingMemoArrayAdapter = new ArrayAdapter<>(
+//                this,
+//                android.R.layout.simple_list_item_multiple_choice,
+//                shoppingMemos
+//        );
+//        //Listview auswählen
+//        ListView shoppingMemoListView = findViewById(R.id.listview_shopping_memos);
+//        //Adapter anhängen
+//        shoppingMemoListView.setAdapter(shoppingMemoArrayAdapter);
+
+        // Anpassen des Array-Adapters
+        ArrayAdapter<ShoppingMemo> adapter = (ArrayAdapter<ShoppingMemo>) mShoppingMemosListView.getAdapter();
+
+        adapter.clear();
+        adapter.addAll(shoppingMemos);
+        adapter.notifyDataSetChanged();
 
 
-        //Listview auswählen
-        ListView shoppingMemoListView = findViewById(R.id.listview_shopping_memos);
-
-        //Adapter anhängen
-        shoppingMemoListView.setAdapter(shoppingMemoArrayAdapter);
 
     }
 
@@ -283,15 +282,14 @@ public class MainActivity extends AppCompatActivity {
                 // returnValue explitit angegeben
                 returnValue = true;
 
-                // ein Boolean zu einem Array -> prüft welche Item aktiviert sind
+                // ein BooleanArray zu einem Array -> prüft welche Item aktiviert wurden
                 SparseBooleanArray touchedShoppingMemosPositions = shoppingMemoListView.getCheckedItemPositions();
+                ListView lv = shoppingMemoListView;
 
                 // Hier können wir auf Klicks auf CAB-Actions reagieren.
                 switch (item.getItemId()){
                     case R.id.cab_delete:
                         //Toast.makeText(MainActivity.this, "Einträge werden hier gelöscht", Toast.LENGTH_SHORT).show();
-
-
 
                         //iteration über alle Checkboxen
                         for(int i=0 ; i<touchedShoppingMemosPositions.size(); i++ ){
@@ -332,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
                                         " , Inhalt: " + shoppingMemo.toString());
 
                                 //Hier kommt der Alert-Dialog zum einsatz
-                                AlertDialog editShoppingMemoDialog = createShoppingDialog(shoppingMemo); //erstellen des Dialogs
+                                AlertDialog editShoppingMemoDialog = createEditShoppingDialog(shoppingMemo); //erstellen des Dialogs
                                 editShoppingMemoDialog.show(); //Dialog anzeigen
                             }
                         }
@@ -342,14 +340,12 @@ public class MainActivity extends AppCompatActivity {
 //                    /*
 //                    * SELECT-ALL ELEMENTS nachfügen
 //                    */
-//                    case R.id.cab_selectAll:
-//                        for(int i=0 ;i< touchedShoppingMemosPositions.size(); i++){
-//                            //Schlüssel-Position    Key:    Value:true/false
-//                            int positionInListView = touchedShoppingMemosPositions.keyAt(i);
-//                            touchedShoppingMemosPositions.valueAt(i).
-//                        }
-//                        return true;
-//                        /**/
+                    case R.id.cab_selectAll:
+                        Toast.makeText(MainActivity.this, "Alle Einträge werden ausgewählt", Toast.LENGTH_SHORT).show();
+
+                        showAllListEntries();   //zeige alle aktuellen Einträge an
+                        mode.finish();          //beendet den contextualActionBar-modus
+                        return true;
 
                     default:
 
@@ -363,8 +359,8 @@ public class MainActivity extends AppCompatActivity {
             public void onDestroyActionMode(ActionMode mode) {
                 // Hier können wir Aktualisierungen an der Activity vornehmen, wenn die CAB
                 // entfernt wird. Standardmäßig werden die ausgewählten Einträge wieder freigegeben.
-
-                //Wenn der nEintrag gelöscht wurde, explizit auf 0 setzen
+                // In dieser Callback-Methode reagieren wir auf das Schließen der CAB
+                /// Wir setzen den Zähler auf 0 zurück
                 selectCount = 0;
             }
         });
@@ -372,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
 
     //------------------------------------------------------------
     // ALERT-DIALOG für Einträge ändern
-    private AlertDialog createShoppingDialog(final ShoppingMemo shoppingMemo){
+    private AlertDialog createEditShoppingDialog(final ShoppingMemo shoppingMemo){
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         //Anzeige/Ansicht
         LayoutInflater inflater = getLayoutInflater();
@@ -408,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
                         int quantity = Integer.parseInt(quantityString);
 
                         //Eintrag aktualisieren  // An dieser Stelle schreiben wir die geänderten Daten in die SQLite Datenbank
-                        ShoppingMemo memo = dataSource.updateShoppingMemo(shoppingMemo.getId() , product , quantity);
+                        ShoppingMemo memo = dataSource.updateShoppingMemo(shoppingMemo.getId() , product , quantity , shoppingMemo.isChecked());
                         Log.d(TAG, "onClick: Alter Eintrag - ID: " + shoppingMemo.getId() + " inhalt: "+ shoppingMemo.toString() +" -> ");
                         Log.d(TAG, "onClick: Neuer Eintrag - ID: " + shoppingMemo.getId() + " inhalt: "+ memo.toString() +" -> ");
 
@@ -421,7 +417,7 @@ public class MainActivity extends AppCompatActivity {
                 //Negativer Button(StringText , Listener )
                 .setNegativeButton(R.string.alertDialog_button_negativ, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(DialogInterface dialog, int id) {
                         //Dialog abbrechen
                         dialog.cancel();
                     }
@@ -432,4 +428,64 @@ public class MainActivity extends AppCompatActivity {
         //Erstellt den finalen Builder und gibt ihn zurück
         return builder.create();
     }
+
+    //-------------------------------------------------------------------
+    private void initializeShoppingMemosListView() {
+        List<ShoppingMemo> emptyListForInitialization = new ArrayList<>();
+
+        mShoppingMemosListView = findViewById(R.id.listview_shopping_memos);
+
+        // Erstellen des ArrayAdapters für unseren ListView
+        ArrayAdapter<ShoppingMemo> shoppingMemoArrayAdapter = new ArrayAdapter<ShoppingMemo> (
+                this,
+                android.R.layout.simple_list_item_multiple_choice,
+                emptyListForInitialization) {
+
+            // Wird immer dann aufgerufen, wenn der übergeordnete ListView die Zeile neu zeichnen muss
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+
+                View view =  super.getView(position, convertView, parent);
+                TextView textView = (TextView) view;
+
+                ShoppingMemo memo = (ShoppingMemo) mShoppingMemosListView.getItemAtPosition(position);
+
+                // Hier prüfen, ob Eintrag abgehakt ist. Falls ja, Text durchstreichen
+                if (memo.isChecked()) {
+                    textView.setPaintFlags(textView.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+                    textView.setTextColor(Color.rgb(175,175,175));
+                }
+                else {
+                    textView.setPaintFlags( textView.getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
+                    textView.setTextColor(Color.DKGRAY);
+                }
+
+                return view;
+            }
+        };
+
+        mShoppingMemosListView.setAdapter(shoppingMemoArrayAdapter);
+
+        mShoppingMemosListView.setOnItemClickListener( (AdapterView<?> adapterView, View view, int position, long id) -> {
+            //} new AdapterView.OnItemClickListener() {
+            //@Override
+            //public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                ShoppingMemo memo = (ShoppingMemo) adapterView.getItemAtPosition(position);
+
+                // Hier den checked-Wert des Memo-Objekts umkehren, bspw. von true auf false
+                // Dann ListView neu zeichnen mit showAllListEntries()
+                ShoppingMemo updatedShoppingMemo = dataSource.updateShoppingMemo(memo.getId(), memo.getProduct(), memo.getQuantity(), (!memo.isChecked()));
+                Log.d(TAG, "Checked-Status von Eintrag: " + updatedShoppingMemo.toString() + " ist: " + updatedShoppingMemo.isChecked());
+                showAllListEntries();
+            //}
+        });
+
+    }
+
+
+
+
+
+
+
 }

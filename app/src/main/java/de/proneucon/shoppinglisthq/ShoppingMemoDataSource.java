@@ -27,7 +27,8 @@ public class ShoppingMemoDataSource {
     private String[] columns = {
             ShoppingMemoDbHelper.COLUMN_ID ,
             ShoppingMemoDbHelper.COLUMN_PRODUCT ,
-            ShoppingMemoDbHelper.COLUMN_QUANTITY
+            ShoppingMemoDbHelper.COLUMN_QUANTITY ,
+            ShoppingMemoDbHelper.COLUMN_CHECKED
     };
 
 
@@ -65,11 +66,16 @@ public class ShoppingMemoDataSource {
 
     //-----------------------------------------------------------------
     // METHODE - Ändern eines Eintrags
-    public ShoppingMemo updateShoppingMemo(long id , String newProduct , int newQuantity){
+    public ShoppingMemo updateShoppingMemo(long id , String newProduct , int newQuantity,  boolean newChecked){
+
+        //CHECKED
+        int intValueChecked = (newChecked)? 1 : 0;
+
         //setzen der neuen Werte
         ContentValues values = new ContentValues();
         values.put(ShoppingMemoDbHelper.COLUMN_PRODUCT , newProduct);
         values.put(ShoppingMemoDbHelper.COLUMN_QUANTITY , newQuantity);
+        values.put(ShoppingMemoDbHelper.COLUMN_CHECKED, intValueChecked);
 
         database.update(ShoppingMemoDbHelper.TABLE_SHOPPING_LIST ,
                 values,
@@ -107,14 +113,17 @@ public class ShoppingMemoDataSource {
         int idIndex = cursor.getColumnIndex(ShoppingMemoDbHelper.COLUMN_ID);
         int idProduct = cursor.getColumnIndex(ShoppingMemoDbHelper.COLUMN_PRODUCT);
         int idQuantity = cursor.getColumnIndex(ShoppingMemoDbHelper.COLUMN_QUANTITY);
+        int idChecked = cursor.getColumnIndex(ShoppingMemoDbHelper.COLUMN_CHECKED);
 
         //Die dahinter liegenden Werte beschaffen:
         String product = cursor.getString(idProduct);
         int quantity = cursor.getInt(idQuantity);
         long id = cursor.getLong(idIndex);
+        int intValueChecked = cursor.getInt(idChecked);
+        boolean isChecked = (intValueChecked != 0);
 
         // ShoppingMemo-Objekt mit den Werten erzeugen und übergeben
-        ShoppingMemo shoppingMemo = new ShoppingMemo(product, quantity, id);
+        ShoppingMemo shoppingMemo = new ShoppingMemo(product, quantity, id, isChecked);
         return  shoppingMemo;
 
     }
