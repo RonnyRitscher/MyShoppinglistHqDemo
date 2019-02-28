@@ -1,8 +1,13 @@
 package de.proneucon.shoppinglisthq;
 
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,16 +25,26 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,10 +59,14 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+
     ShoppingMemoDataSource dataSource;
 
     Spinner mySpinner;
     String[] sortierung = {"Ohne" , "Name (a-z)" , "Name (z-a)"};
+    private Drawable drawable;
+    private CheckedTextView checkedTextView;
+    private boolean showCheckbox;
 
 
     //************************************************************
@@ -224,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
 
     //------------------------------------------------------------
     private void initializeContextualActionBar() {
+
         final ListView shoppingMemoListView = findViewById(R.id.listview_shopping_memos);
 
         //angabe wie darf ausgewählt werden
@@ -243,9 +263,12 @@ public class MainActivity extends AppCompatActivity {
                 //Aktuelisieren des selectCount`s
                 if(checked){
                     selectCount++;
+                    //TODO Checkbox
+
                 }else {
                     selectCount--;
                 }
+
                 //Aktualisieren der Beschriftung:
                 // "0 ausgewählt"
                 String cabTitle = selectCount + " " + getString(R.string.cab_checked_string);
@@ -342,7 +365,7 @@ public class MainActivity extends AppCompatActivity {
 //                    */
                     case R.id.cab_selectAll:
                         Toast.makeText(MainActivity.this, "Alle Einträge werden ausgewählt", Toast.LENGTH_SHORT).show();
-
+                        //TODO - hinzufügen der selectAll - Methode
                         showAllListEntries();   //zeige alle aktuellen Einträge an
                         mode.finish();          //beendet den contextualActionBar-modus
                         return true;
@@ -482,10 +505,110 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //Scan über den FloatingActionButton
+    public void startScan(View view) {
+        Intent intent = new Intent("com.google.zxing.client.android.SCAN");
+
+        intent.putExtra("SCAN_MODE" , "PRODUCT_MODE");
+
+        try {
+            //BESONDERHEIT: sie andere App soll uns ein ergebis zurück liefern
+            startActivityForResult(intent , 1);
+        }catch (ActivityNotFoundException e){
+            //Was passiert wenn die App nicht installiert/auffindbar ist
+            Toast.makeText(this, "Scanner nicht installiert!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        if(requestCode==1 && resultCode==RESULT_OK){
+            TextView product = findViewById(R.id.editText_product); //steuert den TV editText_product an
+
+            //hier soll der Text aus dem Intent in das et_product übergeben werden
+            product.setText(getProductName(data.getStringExtra("SCAN_RESULT")));
+
+            //Focus nach dem eintragen auf die quantity setzen
+            TextView quantity = findViewById(R.id.editText_quantity);
+            quantity.requestFocus();
 
 
+        }else{
+            Toast.makeText(this, "Scan nicht möglich. Prüfe RequestCode oder ResultCode!", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    //---------------------------------------------------------------------
+    private String getProductName(String scanResult){
+        HoleDatenTask task = new HoleDatenTask();
+        String result = null;
+        try {
+            result = task.execute(scanResult).get();
+            Log.d(TAG, "getProductName: result: " + result);
 
 
+            JSONObject rootObject = new JSONObject(result);
+            Log.d(TAG, "getProductName: rootObject: " + rootObject.toString());
 
+            //Informationen aus dem JSON filtern
+            if(rootObject.has("product")){
+                JSONObject productObject = rootObject.getJSONObject("product");
 
+                //NAME des PRODUKTS
+                if (productObject.has("product_name")){
+                    return productObject.getString("product_name");
+                }
+            }
+
+        } catch (ExecutionException e) {
+            Log.e(TAG, " ERROR ", e);
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            Log.e(TAG, " ERROR ", e);
+            e.printStackTrace();
+        } catch (JSONException e) {
+            Log.e(TAG, " ", e);
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    //---------------------------------------------------------------------
+    //DER ASYNC_TASK kann verwendet werden um Daten (JSON/XML) von externen Seite zu verarbeiten
+    public class HoleDatenTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... strings) {
+            //Welche WEBSEITE und elche API
+            final String baseUrl = "https://world.openfoodfacts.org/api/v0/product/";   // WEBSEITE
+            final String requestUrl = baseUrl + strings[0] + ".json";                   //
+
+            Log.d(TAG, "doInBackground: REQUEST-URL " +requestUrl );
+
+            StringBuilder result = new StringBuilder();
+
+            URL url = null;
+            try {
+                //Verwende die gesamte zusammengesetzteURL
+                url = new URL(requestUrl);
+            } catch (MalformedURLException e) {
+                Log.e(TAG, "doInBackground: ERROR - die erzeugte URL konnte nicht erreicht werden");
+                e.printStackTrace();
+            }
+
+            try (
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(url.openConnection().getInputStream()))){
+                String line;
+                while ( (line = reader.readLine()) != null ){
+                    result.append(line);
+                }
+            }catch (IOException e){
+                Log.e(TAG, "doInBackground: ERROR - lesen der Connection nicht möglich", e);
+            }
+            Log.d(TAG, "doInBackground: " + result.toString());
+            return  result.toString();
+        }
+    }
 }
